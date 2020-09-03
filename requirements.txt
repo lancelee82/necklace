@@ -1,0 +1,15 @@
+
+#mxnet
+#pytorch
+#tensorflow
+
+numba
+#pyculib
+
+pynccl
+
+zerorpc
+msgpack==0.5.6
+msgpack-numpy
+
+#mpi4py
