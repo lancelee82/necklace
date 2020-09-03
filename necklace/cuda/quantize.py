@@ -94,7 +94,7 @@ def cu_knl_matrix_dequantize_e(A, C, R, thrd=0.3):
 # -------------------------------------------------------------------
 
 def cu_fn_matrix_quantize_e(A, C, R, thrd=0.3,
-                            #bpg=4, tpb=32,  # TODO: how to set whose ???
+                            #bpg=4, tpb=32,  # TODO: how to set them [?]
                             bpg=4, tpb=128,
                             to_device=False, stream=None):
 
@@ -109,7 +109,7 @@ def cu_fn_matrix_quantize_e(A, C, R, thrd=0.3,
         else:
             dA, dR, dC = A, R, C
 
-        cu_knl_matrix_quantize_e[(bpg, bpg), (tpb / CMP_RATIO, tpb), stream](dA, dC, dR, thrd)
+        cu_knl_matrix_quantize_e[(bpg, bpg), (tpb // CMP_RATIO, tpb), stream](dA, dC, dR, thrd)
 
         #hR = dR.copy_to_host()
         #hC = dC.copy_to_host()
@@ -131,7 +131,7 @@ def cu_fn_matrix_dequantize_e(A, C, R, thrd=0.3,
         else:
             dA, dR, dC = A, R, C
 
-        cu_knl_matrix_dequantize_e[(bpg, bpg), (tpb / CMP_RATIO, tpb), stream](dA, dC, dR, thrd)
+        cu_knl_matrix_dequantize_e[(bpg, bpg), (tpb // CMP_RATIO, tpb), stream](dA, dC, dR, thrd)
 
 
 # -------------------------------------------------------------------
@@ -142,7 +142,7 @@ def test_11():
 
     n = 7 * 32
 
-    m = n / CMP_RATIO
+    m = n // CMP_RATIO
     if n % CMP_RATIO != 0:
         m += 1
 
