@@ -769,9 +769,9 @@ class SVCScheduler(svctmp.TmplService):
 
     def init_train(self):
         print('>' * 100)
-        print('>>>', self.q)
+        # print('>>>', self.q)
         self.q_put_state(1, 'init_train')
-        print('<<<', self.q)
+        # print('<<<', self.q)
 
     def wait_for_workers_reg(self):
         self.q_put_state(40, 'wait_wkr_reg')

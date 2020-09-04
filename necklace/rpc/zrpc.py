@@ -207,8 +207,6 @@ class Node(object):
     def check_state(self, *args, **kwargs):
         pass  # do nothing for now
 
-    # NOTE: the first item of m should be the state of svr,
-    # then it could be checked in check_state (implemented in svctmp.py now)
     def q_put(self, q=None, m=None, *args, **kwargs):
         if q is None:
             q = self.q
@@ -222,7 +220,7 @@ class Node(object):
         try:
             r = q.get(*args, **kwargs)
         except Exception as e:
-            #print(e)
+            # print(e)
             r = None
         return r
 
