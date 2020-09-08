@@ -18,7 +18,7 @@ from torchvision import datasets, transforms
 
 # ----------------------------------------------------------------------------
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(CURR_DIR)))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(CURR_DIR))))  # ../../../../
 sys.path.insert(0, ROOT_DIR)
 
 import necklace
