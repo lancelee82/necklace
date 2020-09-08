@@ -14,9 +14,9 @@ Distributed deep learning framework based on mxnet/pytorch/numba and nccl.
 -----------------------------------
 |     Distributed DL Trainer      |
 ===================================
-|           RPC Framework         |
+|          RPC Framework          |
 -----------------------------------
-|          ZeroMQ  +  NCCL        |
+|         ZeroMQ  +  NCCL         |
 -----------------------------------
 |  GPU |  GPU |  GPU |  GPU | GPU |
 ```
@@ -48,7 +48,9 @@ pip install pynccl
 
 ## Examples
 
-### mnist + pytorch
+### DP (Data-Parallel)
+
+#### mnist + pytorch
 
 The helloworld example is the mnist dataset and PyTorch framework based,
 The code is [here](https://github.com/lancelee82/necklace/tree/master/examples/mnist/pytorch).
