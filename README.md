@@ -45,6 +45,11 @@ The pynccl repo is [here](https://github.com/lancelee82/pynccl), or just use pip
 pip install pynccl
 ```
 
+* zerorpc
+
+Necklace implements a RPC framework based on [ZeroRPC](http://www.zerorpc.io/) 
+called [OneRPC](https://github.com/lancelee82/necklace/tree/master/necklace/rpc).
+
 
 ## Examples
 
@@ -52,8 +57,8 @@ pip install pynccl
 
 #### mnist + pytorch
 
-The helloworld example is the mnist dataset and PyTorch framework based,
-The code is [here](https://github.com/lancelee82/necklace/tree/master/examples/mnist/pytorch).
+The hello-world example is also the mnist project and PyTorch framework based,
+The code is [here](https://github.com/lancelee82/necklace/tree/master/examples/dp/mnist/pytorch).
 
 On a server with some GPUs, run scheduler
 
