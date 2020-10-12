@@ -1,4 +1,4 @@
-"""PyTorch Trainer for One Process"""
+"""PyTorch Trainer for One Process (DP)"""
 import six
 import copy
 import random

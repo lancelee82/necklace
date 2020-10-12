@@ -7,7 +7,7 @@ class NklcWrapperBase(object):
     A function wrapper is used when a funcion is too complex
     to pass into necklace framework, and we want to keep the
     complexity outside of the necklace core.
-    The main use cases of wrapper for now is calculating loss
+    The main use cases of wrapper for now are calculating loss
     and doing metric.
     """
 

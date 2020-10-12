@@ -299,7 +299,7 @@ class SVCWorker(svctmp.TmplService):
             pass
 
 
-        elif svr_state == 2:
+        elif svr_state == 2:  # fn_cre_nccl
             msg = sa[0]
             cfg = msg.get('cfg')
             r = self.svr.trnr.cre_nccl(msg)

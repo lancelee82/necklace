@@ -222,14 +222,14 @@ class ModelWrapperHooks(TrainerOPAbs):
         return fname
 
     # NOTE: when self-define a hook func, if hook-befor func, the first arg
-    # is the mdwrp instance which is added automatically here; if hook-after
-    # func, the first two args are mdwrp and the return of the real func,
+    # is the trainer instance which is added automatically here; if hook-after
+    # func, the first two args are trainer and the return of the real func,
     # and the return of hook will replace the real return if it is not None
 
     def hook_iter_run_before(self, funcs, *args, **kwargs):
         # TODO: get the inputs of real func
         ret = None
-        #rettp = args  # the return of the real func
+        #rettp = args  # the return of the last real func [no need !?]
         for fname, fns in funcs.items():
             func = fns[0]
             fargs = fns[1]

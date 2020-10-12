@@ -8,8 +8,9 @@ class NklcHookBase(object):
     please reference :class:`~necklace.trainer.tnopbs.ModelWrapperHooks` for detail.
 
     .. note::
-        A hook may be just a function, but suggests to use a callable class (implemented method __call__),
-        in which we can save some useful informations when call it.
+        A hook may be just a function, but suggests to use a callable
+        class (implemented method __call__), in which we can save some
+        useful informations when call it.
 
     Arguments:
         net: Model Network for training.

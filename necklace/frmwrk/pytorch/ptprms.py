@@ -6,7 +6,16 @@ import numpy as np
 
 import torch
 
+from pynccl import binding as pynccl_binding  # TODO: to necklace.cuda.ncclwrp
+
 from necklace.cuda import nbutils
+
+
+PYNCCL_DTYPE_MAP = {  # TODO: to necklace.cuda.ncclwrp
+    'float': pynccl_binding.ncclFloat,
+    'int': pynccl_binding.ncclInt,
+    'long': pynccl_binding.ncclInt64,
+}
 
 
 # -------------------------------------------------------------------------
@@ -72,6 +81,7 @@ def grads_get(model):
 
 # -------------------------------------------------------------------------
 # for do nccl
+
 
 def init_params_recvs(model):
     prm_revs = OrderedDict()
@@ -220,3 +230,53 @@ def opt_one_grads_do_nccl_allreduce(nc, kn, opt, prm_revs=None, grad_comp_cfg=No
                 all_grads.append(p.grad.data)
 
     nccl_allreduce_by_buckets(nc, kn, all_grads)
+
+
+# -------------------------------------------------------------------------
+# for trans outputs-inputs and grads
+
+def init_tensors_recv(shps, ctx=None, dtype=torch.float32):
+    ts = []
+    for shp in shps:
+        a = torch.zeros(shp, dtype=dtype)
+        if ctx is not None:
+            a = a.to(ctx)
+        ts.append(a)
+    return ts
+
+
+def tensors_do_nccl_p2p_send(nc, rank_send, rank_recv, send_tensors, dtype='float'):
+
+    for p in send_tensors:
+
+        shp = p.shape
+        if len(shp) >= 1 and shp[0] > 0:
+
+            d_arr_send = p.data.data_ptr()
+            d_arr_recv = None
+
+            sz = np.prod(p.data.size())
+            nc.do_pp_send_recv(d_arr_send, d_arr_recv, sz,
+                               rank_send, rank_recv,
+                               datatype=PYNCCL_DTYPE_MAP[dtype])
+
+            nc.stream_sync()
+
+
+def tensors_do_nccl_p2p_recv(nc, rank_send, rank_recv, recv_tensors, dtype='float'):
+
+    for p in recv_tensors:
+
+        shp = p.shape
+        if len(shp) >= 1 and shp[0] > 0:
+
+            d_arr_send = None
+            d_arr_recv = p.data.data_ptr()
+
+            sz = np.prod(p.data.size())
+            nc.do_pp_send_recv(d_arr_send, d_arr_recv, sz,
+                               rank_send, rank_recv,
+                               datatype=PYNCCL_DTYPE_MAP[dtype])
+
+            nc.stream_sync()
+
