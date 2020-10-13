@@ -80,6 +80,8 @@ class TrainerMPOPPytorch(tnopbs.TrainerOPBase):
         if self.is_last_part():
             self.init_loss()
 
+        self.train_data = None  # NOTE: some nodes will not create dataloader
+        self.train_data_it = None
         if self.is_first_part() or self.is_last_part():
             self.init_train_data()
             self.init_train_data_it()
@@ -202,7 +204,8 @@ class TrainerMPOPPytorch(tnopbs.TrainerOPBase):
         #    btch_sampler = sampler.BatchSampler([], 0)
         #    self.train_data.batch_sampler = btch_sampler
 
-        self.train_data_it = iter(self.train_data)
+        if self.train_data is not None:
+            self.train_data_it = iter(self.train_data)
 
     def clear_train_data(self, *args, **kwargs):
         try:

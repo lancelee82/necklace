@@ -11,3 +11,6 @@ pytorch/train_mnist_mp_2_splt.py
 
 pytorch/train_mnist_mp_5_nklc.py
     MNIST multiple-devices MP example by necklace.
+
+pytorch/train_mnist_mp_5_nklc_w3.py
+    MNIST 3-devices MP example by necklace.
