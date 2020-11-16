@@ -60,6 +60,8 @@ class ModelPartWrapper(nn.Module):  # TODO: moved to necklace.frmwrk.pytorch
         if grads is not None:  # not the last submodule which has already done the backward with loss
             if not isinstance(self.out_cache, (list, tuple, set)):
                 outs = [self.out_cache]
+            else:
+                outs = self.out_cache
             for out, grad in zip(outs, grads):
                 torch.autograd.backward(out, grad)
                 # or,
