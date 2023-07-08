@@ -106,6 +106,6 @@ $ python train_mnist_mp_5_nklc.py -r worker -w 2 -k 1 --gpus 2 -u ipc:///tmp/ngn
 
 - [x] DP (Data Parallelism)
 - [x] MP (Model Parallelism)
-- [ ] PP (Pipeline Parallelism)
+- [x] PP (Pipeline Parallelism)
 - [ ] ZeRO ([ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/pdf/1910.02054.pdf))
 
