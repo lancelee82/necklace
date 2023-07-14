@@ -25,7 +25,10 @@ from . import msgpck
 from . import ilog
 
 import logging
-logging.getLogger("zerorpc").setLevel(logging.WARNING)
+#logging.getLogger("zerorpc").setLevel(logging.WARNING)
+#logging.getLogger("zerorpc").setLevel(logging.ERROR)
+logging.getLogger("zerorpc").setLevel(logging.FATAL)  # NOTE: avoid: /!\ gevent_zeromq BUG
+#logging.getLogger("gevent").setLevel(logging.ERROR)
 
 
 class NodeBase(object):

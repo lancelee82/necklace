@@ -1,4 +1,4 @@
-"""Distributed Model-Parallel Trainer Services (Scheduler + Worker)"""
+"""Distributed Model-Parallel (horizontally splitted) Trainer Services (Scheduler + Worker)"""
 from __future__ import print_function, absolute_import, division
 
 import time
@@ -1109,6 +1109,10 @@ class MPSVCScheduler(svctmp.TmplService):
             self.g_sleep(0.01)
 
             r = self.svr.do_stop_train()
+
+            # NOTE: wait the zrpc call to return
+            self.g_sleep(3.0)
+
             self.stop()  # service loop stop
 
         else:

@@ -13,7 +13,7 @@ packages = [
 
 setuptools.setup(
     name='necklace',
-    version='0.0.3',
+    version='0.5.2',
     author="Lance Lee",
     author_email="lancelee82@163.com",
     description="necklace - distributed deep learning framework",
@@ -32,4 +32,4 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
- )
+)

@@ -15,6 +15,8 @@ import numpy as np
 
 from necklace.cuda import nbutils
 from necklace.cuda import ncclwrp
+from necklace.cuda import ncclgrp
+from necklace.cuda import ncclfns
 
 
 class TrainerOPAbs(object):
@@ -398,8 +400,39 @@ class TrainerOPBase(ModelWrapperHooks):
         self.nc.set_nuid(nuid)
         self.nc.init_comm()
 
+        # set nccl group main
+        ncclgrp.set_nccl_group_main_by_nc(self.nc, self.kn)
+
     def del_nccl_comm(self, msg=None, *args, **kwargs):
         self.nc.del_comm()
+
+
+    def cre_nccl_nuid_pg(self, msg, *args, **kwargs):
+        nk = ncclgrp.get_nccl_main_nk()
+        nuid = nk.get_unique_id()
+        return nuid
+
+    def init_nccl_comm_pg(self, msg, *args, **kwargs):
+        nuid = msg.get('nuid')
+        pg_rank = msg.get('pg_rank')  # NOTE: this is the local rank in the group
+        world_size = msg.get('world_size')
+
+        nk = ncclgrp.get_nccl_main_nk()
+        comm_i = nk.get_comm()  # NOTE: this is a new comm that is NOT initiated now
+        comm_i = ncclfns.nk_comm_init_rank(nk, comm_i, world_size, nuid, pg_rank)
+
+        pg_key = msg.get('pg_key')
+        # set nccl group main
+        pg_map = ncclgrp.get_nccl_groups_map()
+        pg_map[pg_key].nk = nk
+        pg_map[pg_key].comm_i = comm_i
+
+    def del_nccl_comm_pg(self, msg=None, *args, **kwargs):
+        ncclgrp.del_nccl_groups_map_comms()
+
+
+    # TODO: for ZeRO Group
+
 
     def nccl_stream_sync(self, *args, **kwargs):
         self.nc.stream_sync()
@@ -438,8 +471,12 @@ class TrainerOPBase(ModelWrapperHooks):
         self.clear_train_data()
 
         self.del_nccl_comm()
+        self.del_nccl_comm_pg()
 
         self.after_train()
 
     def clear_train_data(self, *args, **kwargs):
+        pass
+
+    def metric_log(self, *args, **kwargs):  # TODO: to a callback
         pass

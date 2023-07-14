@@ -97,6 +97,29 @@ def tensor_size(a):
         return None
 
 
+"""
+>>> for v in dir(torch):
+...     if 'Tensor' in v:
+...         print(v)
+... 
+BFloat16Tensor
+BoolTensor
+ByteTensor
+CharTensor
+DoubleTensor
+FloatTensor
+HalfTensor
+IntTensor
+LongTensor
+ShortTensor
+Tensor
+TensorType
+>>> 
+"""
+def tensor_dtype(a):
+    pass  # TODO:
+
+
 # -----------------------------------------------------------------
 # TODO: mxnet [o]  pytorch [t]
 

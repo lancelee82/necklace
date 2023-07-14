@@ -4,6 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# NOTE: now we can NOT put functions like torch.xx and F.xx to nn.Sequential,
+#       and the forward of the submodel may be very special or complex,
+#       so in the most cases we must implement submodel mannually with
+#       a whole forward function, and then wrap them with this class
 class ModelPartWrapper(nn.Module):
     def __init__(self, submdls=[], md_device='cuda:0', mp_order=0):
         super(ModelPartWrapper, self).__init__()
@@ -34,10 +38,6 @@ class ModelPartWrapper(nn.Module):
             inputs = args
         return inputs
 
-    # NOTE: now we can NOT put functions like torch.xx and F.xx to nn.Sequential,
-    #       and the forward of the submodel may be very special or complex,
-    #       so in the most cases we must implement submodel mannually with
-    #       a whole forward function, and then wrap them with this class
     def forward(self, *args, **kwargs):
         inputs = self.cache_graded_input(*args)
         out = self.net(*inputs)

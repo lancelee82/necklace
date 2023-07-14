@@ -1,21 +1,18 @@
-### necklace examples for MP (Model Parallel) training
+### necklace examples for MP (Tensor Model Parallel) training
 
 * pytorch/main.py
 
 MNIST example from pytorch examples [here](https://github.com/pytorch/examples/tree/master/mnist).
 
-* pytorch/train_mnist_mp_1_ori.py
 
-MNIST single-machine MP example from pytorch tutorial [here](https://github.com/pytorch/tutorials/blob/master/intermediate_source/model_parallel_tutorial.py).
+#### MP (MP-h)
 
-* pytorch/train_mnist_mp_2_splt.py
+MP with model horizontal split so that different parts of a large layer is on different nodes.
 
-MNIST multiple-devices MP example by splitting model to sub-modules and transmitting outputs and gradients between devices.
+* pytorch/train_mnist_mpnn_21_one_grp.py
 
-* pytorch/train_mnist_mp_5_nklc.py
+MNIST example for MP-h with only one MP group and without DP training. 
 
-MNIST multiple-devices MP example by necklace.
+* pytorch/train_mnist_mpnn_22_mpdp_grps.py
 
-* pytorch/train_mnist_mp_5_nklc_w3.py
-
-MNIST 3-devices MP example by necklace.
+MNIST example for MP-h with multiple MP groups and with multiple DP groups training. 

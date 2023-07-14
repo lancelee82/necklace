@@ -557,13 +557,13 @@ class TrainerMPOPPytorch(tnopbs.TrainerOPBase):
     def do_params_nccl_all_reduce(self, *args, **kwargs):
         self.cuda_sync()
         ptprms.params_do_nccl_allreduce(
-            self.nc, self.kn, self.net, self.prm_recvs)
+            None, self.kn, self.net, self.prm_recvs)
         self.cuda_sync()
 
     def do_grads_nccl_all_reduce(self, *args, **kwargs):
         self.cuda_sync()
         ptprms.opt_grads_do_nccl_allreduce(
-            self.nc, self.kn, self.opt, self.prm_recvs,
+            None, self.kn, self.opt, self.prm_recvs,
             grad_comp_cfg=self.grad_comp_cfg)
         self.cuda_sync()
 

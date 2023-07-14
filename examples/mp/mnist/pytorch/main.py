@@ -7,6 +7,10 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
+# for test
+#import multiprocessing as mp
+#mp.set_start_method('spawn', force=True)
+
 
 class Net(nn.Module):
     def __init__(self):

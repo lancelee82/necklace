@@ -20,11 +20,11 @@ class NklcHookBase(object):
         Any other arguments could be passed in and saved for use.
     """
 
-    def __init__(self, net, ctx, *args, **kwargs):
+    def __init__(self, net=None, ctx=None, *args, **kwargs):
         self.net = net
         self.ctx = ctx
 
-    def __call__(self, trnr, *args, **kwargs):
+    def __call__(self, trnr=None, *args, **kwargs):
         # NOTE: the first param trnr is just the trainer assigned by `trainer_cls`,
         # and you can use all its public attributes such like `trnr.net`, `trnr.opt`
         raise NotImplemented()

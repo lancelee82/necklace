@@ -41,6 +41,10 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
         self.optimizer_params = cfg.get('optimizer_params')
         self.batch_size = cfg.get('batch_size')
         self.epochs = cfg.get('epochs')
+        self.dataset_len = cfg.get('dataset_len', self.kn)  # TODO: a dummy for creating indeces
+        self.dataloader_type = cfg.get('dataloader_type', 'ori')  # ori, dp, mp, mpdp
+        self.dataloader_data_shape_dims = cfg.get('dataloader_data_shape_dims', [4,1])
+        self.dataloader_data_typs = cfg.get('dataloader_data_typs', [torch.float32,torch.long])
         self.dataloader_creator = cfg.get('dataloader_creator')
         self.dataloader_creator_args = cfg.get('dataloader_creator_args', ())
         self.dataloader_creator_kwargs = cfg.get('dataloader_creator_kwargs', {})
@@ -70,9 +74,13 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
         self.init_metric()
         self.init_loss()
         self.init_params_recv()
-        self.init_train_data()
-        self.init_train_data_it()
-        #self.init_grads_comp()  # TODO:
+
+        # NOTE: now do init dataloader in reset_distdt_indices()
+        #       after the nccl groups having been created
+        #self.init_train_data()
+        #self.init_train_data_it()
+        self.train_data = None
+        self.train_data_it = None
 
     def init_cuda(self, *args, **kwargs):
         # NOTE: gpu index on this node, sometimes is different with self.rank
@@ -114,6 +122,8 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
     # data loader
 
     def init_train_data(self, *args, **kwargs):
+        print('>>> init_train_data')
+
         # TODO: outside here, split the data
 
         # NOTE: increase the interval time for waiting for the dt_sampler_sync
@@ -126,10 +136,12 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
 
         self.n = len(self.train_data)
 
-        self.ds_len = len(self.train_data.dataset)  # the len of the dataset
-        self.batch_size = self.train_data.batch_size
+        self.dataset_len = len(self.train_data)
+        #self.batch_size = self.train_data.batch_size
 
     def init_train_data_it(self, *args, **kwargs):
+        print('>>> init_train_data_it')
+
         if self.use_dist_data_sampler:
             # NOTE: to avoid putting batch to index_queue before dataloader reset,
             #       here we set the batch_sampler of dataloader to empty
@@ -168,7 +180,7 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
         return s
 
     def sync_dist_data_sampler(self):
-        dn = self.ds_len
+        dn = self.dataset_len
         batch_size = self.batch_size
 
         if self.rank == 0:
@@ -224,17 +236,25 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
     # NOTE: use_dist_data_sampler is always False
 
     def cre_distdt_indices(self, msg, *args, **kwargs):
-        dt_indices = np.arange(self.ds_len)
+        dt_indices = np.arange(self.dataset_len)
         shuffle = self.dataloader_creator_kwargs.get('shuffle', False)
         if shuffle:
             random.shuffle(dt_indices)
+
         return dt_indices
 
     def reset_distdt_indices(self, msg, *args, **kwargs):
-        r = msg.get('dt_indices')
+        # NOTE: now do init dataloader in reset_distdt_indices()
+        #       after the nccl groups having been created
+        if self.train_data is None:
+            self.init_train_data()
+            self.init_train_data_it()
 
         if not self.use_dist_data_sampler:
             return
+
+        r = msg.get('dt_indices')
+        #print('dt_indices', self.rank, len(r), r[:10])
 
         batch_size = self.batch_size
         n = len(r)
@@ -247,15 +267,66 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
         self.reset_data_loader()
 
     # -------------------------------------------------------------
+    # check if the dataloader is for mp, if is, broadcast the data
+    # from rank-0 to others in its mp_group, note only the rank-0
+    # in a mp_group has a real dataloader
+
+    def dtld_check_if_mpdp(self, dt):
+        if 'mp' in self.dataloader_type:
+            assert len(dt) == len(self.dataloader_data_shape_dims), \
+                'len(dt) != len(self.dataloader_data_shape_dims)'
+            dt = self.dtld_sync_mp_inputs(dt,
+                                          self.dataloader_data_shape_dims,
+                                          self.dataloader_data_typs)
+        else:
+            pass
+        return dt
+
+    def dtld_sync_mp_inputs(self, dt, shp_dims, typs):
+        if isinstance(dt, (list, tuple)):
+            rt = []
+            for i, d in enumerate(dt):
+                dd = self.dtld_sync_mp_inputs(d, shp_dims[i], typs[i])
+                rt.append(dd)
+        else:
+            rt = self.dtld_sync_mp_input(dt, shp_dims, typs)
+        return rt
+
+    def dtld_sync_mp_input(self, dt, shp_dim, typ):
+        if dt is None:
+            shp = [0 for _ in range(shp_dim)]
+        else:
+            shp = [s for s in dt.shape]
+        #print('>shp', shp)
+        shp = torch.FloatTensor(shp).to(self.ctx)
+        self.cuda_sync()
+        dtdist.dt_shape_do_nccl_broadcast(None, shp)
+        self.cuda_sync()
+
+        shp = shp.cpu().long().numpy().tolist()
+        #print('<shp', shp)
+
+        if dt is None:
+            inp = torch.zeros(shp, dtype=typ).to(self.ctx)
+        else:
+            inp = dt
+        self.cuda_sync()
+        dtdist.dt_input_do_nccl_broadcast(None, inp, dtype=ptutils.pt_dtype_to_str(typ))
+        self.cuda_sync()
+
+        return inp
+
+    # -------------------------------------------------------------
     # train (rpc server api)
 
     def train_loop(self, msg, *args, **kwargs):
         pass
 
     def check_msg(self, msg, *args, **kwargs):
+        #print('check_msg', msg)
 
         cmd = msg.get('cmd')
-        typ = msg.get('typ')  # 1: weig  2: grad
+        typ = msg.get('typ')  # 1: weig  2: grad  3: 'oopt'
 
         if cmd == 'weights_sync':
             self.do_params_nccl_all_reduce()
@@ -293,10 +364,15 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
                 # <3.2> if allreduce gradients, do optimizer step after the grads allreduce
                 self.do_a_train_step()
 
-            #elif typ == 'weig':
-            else:
+            elif typ == 'weig':
                 # <2.2> if allreduce weights, do weights allreduce after optimezer step
                 self.do_params_nccl_all_reduce()
+
+            # ========================================================
+            # NOTE: 'oopt': only opt.step()  (for dpmp-mpnn-onegrp)
+            # ========================================================
+            else:
+                self.do_a_train_step()
 
             ret = {'ret': 'nccl_all_reduced', 'epoch': self.e, 'batch_i': self.i}
 
@@ -317,13 +393,13 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
     def _one_step(self, rank=0, *args, **kwargs):
         dt = self.get_a_data_batch(self.rank)
 
-        if not dt:
+        if dt is None:
             self.i = 0
             self.i_m = 0
             self.e += 1
             ret = 'epoch_end'
         else:
-            x, y = dt  # NOTE: maybe the x, y each is a list
+            x, y = dt  # NOTE: maybe the x, y each is a list or dict
 
             self.do_a_batch_grads([x], [y], [self.loss])
 
@@ -338,19 +414,29 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
     def _get_a_data_batch(self, rank=0, *args, **kwargs):
         try:
             dt = next(self.train_data_it)
+
+            # NOTE: 1. this is for MP to sync input data
+            #       2. for complex scenario, you can use dataloader
+            #          wrapper and do data sync there by yourself
+            #          (now: as using fn_data_batch() in tnoppu.py)
+            dt = self.dtld_check_if_mpdp(dt)
+
             return dt
-        except StopIteration as e:
+
+        except StopIteration as ex:
+            #print('=>' * 20, ' StopIteration')
             return None
-        except Exception as e:
+        except Exception as ex:
+            print(ex)
             return None
 
     def _do_a_batch_grads(self, inputs, targets, loss_fns, *args, **kwargs):
         data = inputs[0]
         target = targets[0]
-        loss = loss_fns[0]
+        loss_fn = loss_fns[0]
 
-        data = self.to_ctx(data, self.ctx)
-        target = self.to_ctx(target, self.ctx)
+        data = self.to_ctx(data, self.ctx)  # force to a list or keep as a dict
+        target = self.to_ctx(target, self.ctx, to_list=False)  # keep as original tensor or list or dict
 
         if isinstance(self.opt, (list, tuple)):
             for opt in self.opt:
@@ -359,14 +445,33 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
             self.opt.zero_grad()
 
         # forward
-        output = self.net(*data)
+        if isinstance(data, (dict,)):
+            output = self.net(**data)
+        else:
+            output = self.net(*data)
 
-        output = self.to_list(output)
-        self.lss = loss(*output, *target)
-        # TODO: or use following format and use loss wrapper
-        # NOTE: the output and target both may be list or tuple
-        #self.lss = loss(output, target)
+        # loss
+        # <1>
+        '''
+        if isinstance(output, (dict,)):
+            if isinstance(target, (dict,)):
+                self.lss = loss_fn(**output, **target)
+            else:
+                self.lss = loss_fn(**output, *target)
+        else:
+            output = self.to_list(output)
+            if isinstance(target, (dict,)):
+                self.lss = loss_fn(*output, **target)
+            else:
+                self.lss = loss_fn(*output, *target)
+        '''
+        # <2>
+        # use loss_fn wrapper (more uniform !)
+        # NOTE: 1. the output and target both may be list or tuple or dict
+        #       2. the returned lss may be a loss class wrapper itself
+        self.lss = loss_fn(output, target)
 
+        # backward
         if isinstance(self.lss, (list, tuple)):
             for li, l in enumerate(self.lss):
                 if li == len(self.lss) - 1:
@@ -376,6 +481,7 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
         else:
             self.lss.backward()
 
+        # metric
         if self.metric:
             if self.i == 0:  # a new epoch
                 self.metric.reset()
@@ -394,14 +500,21 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
     # -------------------------------------------------------------
     # train (util functions)
 
-    def to_ctx(self, dt, ctx):
+    def to_ctx(self, dt, ctx, to_list=True):
         if isinstance(dt, (list, tuple)):
             r = []
             for d in dt:
                 c = self.try_to_ctx(d, ctx)
                 r.append(c)
+        elif isinstance(dt, (dict,)):
+            d = {}
+            for k, v in dt.items():
+                d[k] = self.try_to_ctx(v, ctx)
+            r = d  # a dict
         else:
-            r = [self.try_to_ctx(dt, ctx)]  # NOTE: this is a list
+            r = self.try_to_ctx(dt, ctx)
+            if to_list:
+                r = [r,]  # NOTE: this is a list
         return r
 
     def try_to_ctx(self, d, ctx):
@@ -421,7 +534,7 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
     def do_params_nccl_all_reduce(self, *args, **kwargs):
         self.cuda_sync()
         ptprms.params_do_nccl_allreduce(
-            self.nc, self.kn, self.net, self.prm_recvs)
+            None, self.kn, self.net, self.prm_recvs)
         self.cuda_sync()
 
     def do_grads_nccl_all_reduce(self, *args, **kwargs):
@@ -431,7 +544,7 @@ class TrainerOPPytorch(tnopbs.TrainerOPBase):
         #    grad_comp_cfg=self.grad_comp_cfg)
         # NOTE: use parameters in optimeter(s)
         ptprms.opt_grads_do_nccl_allreduce(
-            self.nc, self.kn, self.opt, self.prm_recvs,
+            None, self.kn, self.opt, self.prm_recvs,
             grad_comp_cfg=self.grad_comp_cfg)
         self.cuda_sync()
 

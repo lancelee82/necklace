@@ -150,7 +150,7 @@ class Net(nn.Module):
         x = self.submdl_wrp_1(x)
 
         # ----------------------------------------
-        x = x.to(device2)  # transmitting the middle-outputs
+        x = x.to(device2)  # transmitting the intermediate-outputs
 
         output = self.submdl_wrp_2(x)
         return output
@@ -250,8 +250,8 @@ def main():
     torch.manual_seed(args.seed)
 
     #device = torch.device("cuda" if use_cuda else "cpu")
-    device1 = torch.device("cuda:1" if use_cuda else "cpu")
-    device2 = torch.device("cuda:3" if use_cuda else "cpu")
+    device1 = torch.device("cuda:0" if use_cuda else "cpu")
+    device2 = torch.device("cuda:1" if use_cuda else "cpu")
 
     kwargs = {'batch_size': args.batch_size}
     if use_cuda:

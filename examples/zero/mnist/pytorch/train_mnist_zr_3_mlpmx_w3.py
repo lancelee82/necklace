@@ -17,11 +17,11 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(CURR_
 sys.path.insert(0, ROOT_DIR)
 
 import necklace
-#necklace.init(gpu_dev_i)
-from necklace.trainer import tndsmp
+from necklace.trainer import tndszr
 from necklace.rpc import ilog
 from necklace.utils import hookbase
 from necklace.utils import wrpbase
+from necklace.utils.argutils import attach_nk_args_parser
 
 
 # CLI
@@ -38,95 +38,15 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-
 parser.add_argument('--batch-size', '-b', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--epochs', '-e', type=int, default=10, metavar='N',
-                    help='number of epochs to train (default: 10)')
-parser.add_argument('--gpus', '-g', dest='gpu_ids', help='GPU device to train with',
-                    default='0,1,2,3', type=str)
 
-parser.add_argument('--url', '-u', type=str, default='ipc:///tmp/ngn-svr-1.ipc',
-                    help='server url')
-parser.add_argument('--server-url', '-s', type=str, default='ipc:///tmp/ngn-svr-1.ipc',
-                    help='server url')
-parser.add_argument('--role', '-r', type=str, default='worker',
-                    help='node role')
-parser.add_argument('--world-size', '-w', type=int, default=1,
-                    help='workers number (default is 1)')
-parser.add_argument('--rank', '-k', type=int, default=0,
-                    help='worker rank (required)')
+attach_nk_args_parser(parser)
 
 args = parser.parse_args()
 
-gpu_dev_i = int(args.gpu_ids.split(',')[0])
-
 
 # ----------------------------------------------------------------------------
-
-class NetPart1(nn.Module):
-    def __init__(self):
-        super(NetPart1, self).__init__()
-        #d1 = 32
-        d1 = 768  # big model :p
-        self.conv1 = nn.Conv2d(1, d1, 3, 1)
-        self.conv2 = nn.Conv2d(d1, 64, 3, 1)
-        self.dropout1 = nn.Dropout2d(0.25)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
-        return x
-
-
-class NetPart2_1(nn.Module):
-    def __init__(self):
-        super(NetPart2_1, self).__init__()
-        self.dropout2 = nn.Dropout2d(0.5)
-        #d6 = 128
-        d6 = 10240  # big model :p
-        self.fc1 = nn.Linear(9216, d6)
-        self.fc2 = nn.Linear(d6, 9216)
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        return x
-
-
-class NetPart2_2(nn.Module):
-    def __init__(self):
-        super(NetPart2_2, self).__init__()
-        self.dropout2 = nn.Dropout2d(0.5)
-        #d6 = 128
-        d6 = 10240  # big model :p
-        self.fc1 = nn.Linear(9216, d6)
-        self.fc2 = nn.Linear(d6, 10)
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
-
-
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.submdl_1 = NetPart1()
-        self.submdl_2_1 = NetPart2_1()
-        self.submdl_2_2 = NetPart2_2()
-
 
 def get_data_loader(*args, **kwargs):
     batch_size = kwargs.get('batch_size', 64)
@@ -144,7 +64,7 @@ def get_data_loader(*args, **kwargs):
         ])
     )
 
-    #kwargs = {'num_workers': 1, 'pin_memory': True, shuffle=True}
+    #kwargs = {'num_workers': 1, 'pin_memory': True, 'shuffle': True}
     # ============================================================
     # NOTE: here we use DistributedSampler with necklace
     # ============================================================
@@ -180,7 +100,8 @@ def test(args, model, device, test_loader):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += F.nll_loss(output, target, size_average=False).item() # sum up batch loss
+            #test_loss += F.nll_loss(output, target, reduction='sum').item() # sum up batch loss
+            test_loss += F.cross_entropy(output, target, reduction='sum').item() # sum up batch loss
             pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
@@ -188,6 +109,9 @@ def test(args, model, device, test_loader):
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
+
+    # set back to train
+    model.train()
 
 
 # ----------------------------------------------------------------------------
@@ -199,8 +123,12 @@ class HookDoTest(hookbase.NklcHookBase):
         self.aargs = aargs
 
     def __call__(self, trnr, *args, **kwargs):
-        _, test_loader = get_data_loader(batch_size=self.aargs.batch_size)
-        test(self.aargs, self.net, self.ctx, test_loader)
+        _, test_loader = get_data_loader(batch_size=self.aargs.test_batch_size)
+        #test(self.aargs, self.net, self.ctx, test_loader)
+        # NOTE: here the net should be the trained net from trainer
+        whole_md = trnr.get_whole_net_cpu()
+        device = torch.device('cpu')  # NOTE: now do test on cpu
+        test(self.aargs, whole_md, device, test_loader)
 
 
 class HookAfterOneOptStep(hookbase.NklcHookBase):
@@ -224,22 +152,54 @@ class WrpDoLoss(wrpbase.NklcWrapperBase):
 
 # ----------------------------------------------------------------------------
 
+from mlp_mixer import MLPMixer, MLPMixerInp, MLPMixerBody, MLPMixerHead
+
+class MLPMxr(nn.Module):
+    def __init__(self, in_channels, dim, num_classes, patch_size, image_size, depth, token_dim, channel_dim):
+        super(MLPMxr, self).__init__()
+
+        self.submdl_1 = MLPMixerInp(in_channels, dim, num_classes, patch_size, image_size, depth, token_dim, channel_dim)
+        self.submdl_2 = MLPMixerBody(in_channels, dim, num_classes, patch_size, image_size, depth, token_dim, channel_dim)
+        #self.submdl_2_2 = MLPMixerBody(in_channels, dim, num_classes, patch_size, image_size, depth, token_dim, channel_dim)
+        self.submdl_3 = MLPMixerHead(in_channels, dim, num_classes, patch_size, image_size, depth, token_dim, channel_dim)
+
+    def forward(self, x):
+        x = self.submdl_1(x)
+        x = self.submdl_2(x)
+        #x = self.submdl_2_2(x)
+        x = self.submdl_3(x)
+        return x
+
+
 # TODO: automatically built with other infos ==> mputils.MpTrnrModulesMap
 def get_net_map():
+
+    #model = MLPMixer(in_channels=3, image_size=224, patch_size=16, num_classes=1000,
+    #                 dim=512, depth=80, token_dim=256, channel_dim=2048)
+    #model = MLPMixer(in_channels=3, image_size=28, patch_size=4, num_classes=10,
+    #                 dim=512, depth=80, token_dim=256, channel_dim=2048)
+
+    #net = MLPMxr(in_channels=1, image_size=28, patch_size=4, num_classes=10,
+    #                 dim=512, depth=30, token_dim=256, channel_dim=2048)  # NOTE: for wkrs:3
+
+    net = MLPMxr(in_channels=1, image_size=28, patch_size=4, num_classes=10,
+                 #dim=2048, depth=50, token_dim=1024, channel_dim=8192)  # 1.6B
+                 #dim=1024, depth=20, token_dim=512, channel_dim=4096)  # 0.16B
+                 dim=256, depth=10, token_dim=128, channel_dim=1024)
+                 #dim=64, depth=6, token_dim=32, channel_dim=256)  # for small model
+
     net_map = OrderedDict()
 
-    net = Net()
-
     net_map[0] = {'net': net.submdl_1, 'net_map_order': 0, 'worker_rank': 0}
-    #net_map[1] = {'net': [net.submdl_2,], 'net_map_order': 1, 'worker_rank': 1}
-    net_map[1] = {'net': net.submdl_2_1, 'net_map_order': 1, 'worker_rank': 1}
-    net_map[2] = {'net': net.submdl_2_2, 'net_map_order': 2, 'worker_rank': 2}
+    net_map[1] = {'net': net.submdl_2, 'net_map_order': 1, 'worker_rank': 1}
+    #net_map[2] = {'net': net.submdl_2_2, 'net_map_order': 2, 'worker_rank': 2}
+    net_map[2] = {'net': net.submdl_3, 'net_map_order': 2, 'worker_rank': 2}
 
     return net_map
 
 
 def get_net_ctx(args, net_map):
-    gpu_dev_i = int(args.gpu_ids.split(',')[0])
+    gpu_dev_i = int(args.gpu_rank)
     ctx = torch.device(gpu_dev_i)
 
     model = net_map[args.rank]['net']
@@ -250,14 +210,31 @@ def get_net_ctx(args, net_map):
     return model, optimizer, ctx
 
 
+def get_opt(model, *aargs, **kwargs):
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    #optimizer = optim.Adam(model.parameters(), lr=args.lr)  # TODO:
+    return optimizer
+
+
+# ----------------------------------------------------------------------------
+from necklace.frmwrk.pytorch.ptutils import prnt_md
+
+def print_net_map(netmap):
+    for k, m in netmap.items():
+        net = m['net']
+        print('-=' * 20, m['net_map_order'])
+        prnt_md(net)
+
+
 if __name__ == '__main__':
 
-    ilog.il_add(tndsmp.ILOG_I_MP_SVR_WKR)
-    #ilog.il_add(tndsmp.ILOG_I_MP_SVC_WKR)
-    ilog.il_add(tndsmp.ILOG_I_MP_SVR_SCH)
-    #ilog.il_add(tndsmp.ILOG_I_MP_SVC_SCH)
+    #ilog.il_add(tndszr.ILOG_I_ZR_SVR_WKR)
+    #ilog.il_add(tndszr.ILOG_I_ZR_SVC_WKR)
+    ilog.il_add(tndszr.ILOG_I_ZR_SVR_SCH)
+    #ilog.il_add(tndszr.ILOG_I_ZR_SVC_SCH)
 
     net_map = get_net_map()
+    print_net_map(net_map)
 
     role = args.role
 
@@ -270,15 +247,21 @@ if __name__ == '__main__':
             'rank': args.rank,
 
             'epochs': args.epochs,
-            'nccl_allreduce_typ': 'grad',  # 'weig'
+
+            # ========================================================
+            # NOTE: use only main nccl group
+            # ========================================================
+            'nccl_allreduce_typ': 'oozr', # 'grad',  # 'weig'
 
             'net_map': net_map,
         }
 
-        svc = tndsmp.MPSVCScheduler(cfg)
+        svc = tndszr.MPSVCScheduler(cfg)
         svc.loop()
 
     elif role == 'worker':
+
+        gpu_dev_i = int(args.gpu_rank)
 
         # ========================================================
         # do necklace init (mp/cuda) here only in worker
@@ -288,7 +271,7 @@ if __name__ == '__main__':
         # set cuda device of pytorch
         torch.cuda.set_device(gpu_dev_i)
 
-        from necklace.trainer import mpoppt
+        from necklace.trainer import zroppt
 
         net, opt, ctx = get_net_ctx(args, net_map)
 
@@ -302,18 +285,23 @@ if __name__ == '__main__':
             #'svr_cli': 'ipc:///tmp/snp-svr-1.ipc',
             'scheduler_url': args.server_url,
 
-            'trainer_cls': mpoppt.TrainerMPOPPytorch,
+            'trainer_cls': zroppt.TrainerMPOPPytorch,
             'trainer_cfg': {
                 'kn': args.world_size,
                 'ti': args.rank,
                 'ctx': ctx,
                 'net': net,#net_map[args.rank],
+                'net_map': net_map,  # NOTE: now should on CPU
                 'net_init': None,
                 'net_map_order': args.rank,
                 'net_map_maxlen': len(net_map.keys()),
                 'opt': opt,
+                'optimizer_creator': get_opt,
+                'optimizer_creator_args': (),
+                'optimizer_creator_kwargs': {},
                 #'loss': F.nll_loss,  # use the original loss func
-                'loss': WrpDoLoss(net, ctx, F.nll_loss),  # or use the loss wrapper
+                #'loss': WrpDoLoss(net, ctx, F.nll_loss),  # or use the loss wrapper
+                'loss': WrpDoLoss(net, ctx, nn.CrossEntropyLoss()),  # NOTE: model without log_softmax
                 'mtrc': None,
                 'optimizer_params': None,
                 'epochs': args.epochs,
@@ -323,19 +311,23 @@ if __name__ == '__main__':
                 'dataloader_creator_kwargs': {'kn': args.world_size,
                                               'rank': args.rank,
                                               'batch_size': args.batch_size,
-                                              'shuffle': True,
+                                              'shuffle': False,  # NOTE: for DistributedSampler on diff node
                                               'args': args},
                 'use_dist_data_sampler': False,
                 'log_interval': args.log_interval,
             },
         }
 
-        svc = tndsmp.MPSVCWorker(cfg)
+        svc = tndszr.MPSVCWorker(cfg)
 
         # TODO: for now we can not run test because the model is a part,
         #       and we must collect the whole model to a place to run it
         #hook_do_test = HookDoTest(args, net, ctx)
         #svc.svr.trnr.register_hook_after_epoch(hook_do_test)
+        if args.rank == 0:
+            hook_do_test = HookDoTest(args, net, ctx)
+            svc.svr.trnr.register_hook_after_epoch(hook_do_test)
+            #svc.svr.trnr.register_hook_after_train(hook_do_test)  # NOTE: when the test is slow, the hook will break the heartbeat !!
 
         hook_after_a_step = HookAfterOneOptStep(net, ctx)
         svc.svr.trnr.register_hook_after_do_a_train_step(hook_after_a_step)
@@ -346,7 +338,9 @@ if __name__ == '__main__':
         print('wrong role: %s' % (role))
 
 
-# python train_mnist_mp_5_nklc_w3.py -r scheduler -w 3 -k 0 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 256
-# python train_mnist_mp_5_nklc_w3.py -r worker -w 3 -k 0 --gpus 0 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 256
-# python train_mnist_mp_5_nklc_w3.py -r worker -w 3 -k 1 --gpus 1 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 256
-# python train_mnist_mp_5_nklc_w3.py -r worker -w 3 -k 2 --gpus 2 -u ipc:///tmp/ngn-wkr-2.ipc -s ipc:///tmp/snp-svr-1.ipc -b 256
+"""
+python train_mnist_zr_3_mlpmx_w3.py -r scheduler -w 3 -k 0 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_3_mlpmx_w3.py -r worker -w 3 -k 0 -g 0 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_3_mlpmx_w3.py -r worker -w 3 -k 1 -g 1 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_3_mlpmx_w3.py -r worker -w 3 -k 2 -g 2 -u ipc:///tmp/ngn-wkr-2.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+"""

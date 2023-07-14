@@ -18,41 +18,7 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(9216, 128)
         self.fc2 = nn.Linear(128, 10)
 
-    def forward_ori(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
-
-    def md_split_to_devices(self, devs=[]):
-        if not devs:
-            raise Exception('no multi devices')
-
-        self.devs = devs
-        device1, device2 = devs[0], devs[1]  # TODO: hard code for now
-
-        self.conv1 = self.conv1.to(device1)
-        self.conv2 = self.conv2.to(device1)
-        self.dropout1 = self.dropout1.to(device1)
-
-        self.fc1 = self.fc1.to(device2)
-        self.dropout2 = self.dropout2.to(device2)
-        self.fc2 = self.fc2.to(device2)
-
     def forward(self, x):
-        device1, device2 = self.devs[0], self.devs[1]  # TODO: hard code for now
-
-        x = x.to(device1)
-
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -60,10 +26,6 @@ class Net(nn.Module):
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
-
-        # ----------------------------------------
-        x = x.to(device2)
-
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout2(x)
@@ -72,20 +34,13 @@ class Net(nn.Module):
         return output
 
 
-def train(args, model, device1, device2, train_loader, optimizer, epoch):
+def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device1), target.to(device2)
+        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
         loss = F.nll_loss(output, target)
-        # -----------------------------------------------------------------------
-        # https://pytorch.org/tutorials/intermediate/model_parallel_tutorial.html
-        # NOTE: The backward() and torch.optim will automatically take care of
-        # gradients as if the model is on one GPU. You only need to make sure
-        # that the labels are on the same device as the outputs when calling
-        # the loss function.
-        # -----------------------------------------------------------------------
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -96,13 +51,13 @@ def train(args, model, device1, device2, train_loader, optimizer, epoch):
                 break
 
 
-def test(model, device1, device2, test_loader):
+def test(model, device, test_loader):
     model.eval()
     test_loss = 0
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            data, target = data.to(device1), target.to(device2)
+            data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
@@ -143,9 +98,7 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    #device = torch.device("cuda" if use_cuda else "cpu")
-    device1 = torch.device("cuda:0" if use_cuda else "cpu")
-    device2 = torch.device("cuda:2" if use_cuda else "cpu")
+    device = torch.device("cuda" if use_cuda else "cpu")
 
     kwargs = {'batch_size': args.batch_size}
     if use_cuda:
@@ -165,14 +118,13 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **kwargs)
 
-    model = Net()#.to(device)
-    model.md_split_to_devices(devs=[device1, device2])
+    model = Net().to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device1, device2, train_loader, optimizer, epoch)
-        test(model, device1, device2, test_loader)
+        train(args, model, device, train_loader, optimizer, epoch)
+        test(model, device, test_loader)
         scheduler.step()
 
     if args.save_model:
