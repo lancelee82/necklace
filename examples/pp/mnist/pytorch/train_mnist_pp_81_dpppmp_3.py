@@ -39,7 +39,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--batch-size', '-b', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', '-b', type=int, default=300, metavar='N',
                     help='input batch size for training (default: 64)')
 
 attach_nk_args_parser(parser)
@@ -315,7 +315,7 @@ class MpFc2P1(nn.Module):
         super(MpFc2P1, self).__init__()
 
         inp_dim = 28 * 28
-        d_model = 40960
+        d_model = 40960 * 8  # :p
         out_dim = 10
 
         self.fc1 = ColumnParallelLinear(
@@ -340,7 +340,7 @@ class MpFc2P2(nn.Module):
         super(MpFc2P2, self).__init__()
 
         inp_dim = 28 * 28
-        d_model = 40960
+        d_model = 40960 * 8  # :p
         out_dim = 10
 
         self.fc2 = RowParallelLinear(
@@ -363,7 +363,7 @@ class MpFc2P22x(nn.Module):
         super(MpFc2P22x, self).__init__()
 
         inp_dim = 28 * 28
-        d_model = 40960
+        d_model = 40960 * 8  # :p
         d_model_2 = 10240 #40960
         out_dim = 10
 
@@ -675,19 +675,16 @@ if __name__ == '__main__':
 
 
 """
-=============== 193:3 + 192:3 + 194:2
 
-python train_mnist_pp_81_dpppmp_3.py -r scheduler -w 8 -k 0 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 --epochs 3 -u tcp://192.168.58.193:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r scheduler -w 8 -k 0 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 --epochs 3 -u tcp://127.0.0.1:11001 -b 100
 
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 0 -g 0 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.193:12000 -s tcp://192.168.58.193:11001 -b 100
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 1 -g 1 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.193:12001 -s tcp://192.168.58.193:11001 -b 100
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 2 -g 2 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.193:12002 -s tcp://192.168.58.193:11001 -b 100
-
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 3 -g 0 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.192:12000 -s tcp://192.168.58.193:11001 -b 100
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 4 -g 1 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.192:12001 -s tcp://192.168.58.193:11001 -b 100
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 5 -g 2 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.192:12002 -s tcp://192.168.58.193:11001 -b 100
-
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 6 -g 0 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.194:12000 -s tcp://192.168.58.193:11001 -b 100
-python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 7 -g 1 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://192.168.58.194:12001 -s tcp://192.168.58.193:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 0 -g 0 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12000 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 1 -g 1 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12001 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 2 -g 2 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12002 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 3 -g 3 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12003 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 4 -g 4 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12004 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 5 -g 5 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12005 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 6 -g 6 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12006 -s tcp://127.0.0.1:11001 -b 100
+python train_mnist_pp_81_dpppmp_3.py -r worker -w 8 -k 7 -g 7 -t "dp+pp+mp" -dpsz 2 -ppsz 2 -mpsz 2 -u tcp://127.0.0.1:12007 -s tcp://127.0.0.1:11001 -b 100
 
 """

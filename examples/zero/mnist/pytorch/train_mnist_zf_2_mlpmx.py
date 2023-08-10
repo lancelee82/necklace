@@ -39,7 +39,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 
-parser.add_argument('--batch-size', '-b', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', '-b', type=int, default=100, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--epochs', '-e', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -338,8 +338,8 @@ if __name__ == '__main__':
         print('wrong role: %s' % (role))
 
 
-# python train_mnist_zf_2_mlpmx.py -r scheduler -w 4 -k 0 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 32
-# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 0 --gpus 0 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 32
-# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 1 --gpus 1 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 32
-# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 2 --gpus 2 -u ipc:///tmp/ngn-wkr-2.ipc -s ipc:///tmp/snp-svr-1.ipc -b 32
-# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 3 --gpus 3 -u ipc:///tmp/ngn-wkr-3.ipc -s ipc:///tmp/snp-svr-1.ipc -b 32
+# python train_mnist_zf_2_mlpmx.py -r scheduler -w 4 -k 0 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 100
+# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 0 --gpus 0 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 100
+# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 1 --gpus 1 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 100
+# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 2 --gpus 2 -u ipc:///tmp/ngn-wkr-2.ipc -s ipc:///tmp/snp-svr-1.ipc -b 100
+# python train_mnist_zf_2_mlpmx.py -r worker -w 4 -k 3 --gpus 3 -u ipc:///tmp/ngn-wkr-3.ipc -s ipc:///tmp/snp-svr-1.ipc -b 100

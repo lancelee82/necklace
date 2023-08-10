@@ -43,8 +43,8 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--batch-size', '-b', type=int, default=64, metavar='N',
-                    help='input batch size for training (default: 64)')
+parser.add_argument('--batch-size', '-b', type=int, default=100, metavar='N',
+                    help='input batch size for training (default: 100)')
 
 attach_nk_args_parser(parser)
 
@@ -746,6 +746,22 @@ if __name__ == '__main__':
 
 
 """
+
+python train_mnist_zr_8_dpzrmp_3.py -r scheduler -w 8 -k 0 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 200
+
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 0 -g 0 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 1 -g 1 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 2 -g 2 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-2.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 3 -g 3 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-3.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 4 -g 4 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-4.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 5 -g 5 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-5.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 6 -g 6 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-6.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 7 -g 7 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-7.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
+
+"""
+
+
+"""
 =============== 193:3 + 192:3 + 194:2
 
 python train_mnist_zr_8_dpzrmp_3.py -r scheduler -w 8 -k 0 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 --epochs 3 -u tcp://192.168.58.193:11001 -b 100
@@ -760,25 +776,6 @@ python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 5 -g 2 -t "dp+zr+mp" -dpsz
 
 python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 6 -g 0 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u tcp://192.168.58.194:12000 -s tcp://192.168.58.193:11001 -b 100
 python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 7 -g 1 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u tcp://192.168.58.194:12001 -s tcp://192.168.58.193:11001 -b 100
-
-"""
-
-
-
-"""
-
-python train_mnist_zr_8_dpzrmp_3.py -r scheduler -w 8 -k 0 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 200
-
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 0 -g 0 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 1 -g 1 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 2 -g 2 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-2.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 3 -g 3 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-3.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 4 -g 4 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-4.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 5 -g 5 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-5.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 6 -g 6 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-6.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
-python train_mnist_zr_8_dpzrmp_3.py -r worker -w 8 -k 7 -g 7 -t "dp+zr+mp" -dpsz 2 -zrsz 2 -mpsz 2 -u ipc:///tmp/ngn-wkr-7.ipc -s ipc:///tmp/snp-svr-1.ipc -b 200
 
 """
 

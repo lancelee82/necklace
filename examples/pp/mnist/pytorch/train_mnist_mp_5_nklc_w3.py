@@ -17,7 +17,6 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(CURR_
 sys.path.insert(0, ROOT_DIR)
 
 import necklace
-#necklace.init(gpu_dev_i)
 from necklace.trainer import tndsmp
 from necklace.rpc import ilog
 from necklace.utils import hookbase
@@ -39,7 +38,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 
-parser.add_argument('--batch-size', '-b', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', '-b', type=int, default=300, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--epochs', '-e', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')

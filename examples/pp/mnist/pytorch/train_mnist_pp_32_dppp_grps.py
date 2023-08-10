@@ -38,7 +38,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--batch-size', '-b', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', '-b', type=int, default=300, metavar='N',
                     help='input batch size for training (default: 64)')
 
 attach_nk_args_parser(parser)
@@ -434,21 +434,14 @@ if __name__ == '__main__':
         print('wrong role: %s' % (role))
 
 
-# python train_mnist_mp_5_nklc.py -r scheduler -w 2 -k 0 --epochs 3 -u ipc:///tmp/snp-svr-1.ipc -b 256
-# python train_mnist_mp_5_nklc.py -r worker -w 2 -k 0 -g 0 -u ipc:///tmp/ngn-wkr-0.ipc -s ipc:///tmp/snp-svr-1.ipc -b 256
-# python train_mnist_mp_5_nklc.py -r worker -w 2 -k 1 -g 1 -u ipc:///tmp/ngn-wkr-1.ipc -s ipc:///tmp/snp-svr-1.ipc -b 256
-
 """
 
-python train_mnist_pp_32_dppp_grps.py -r scheduler -w 4 -k 0 -t "dp+pp" -dpsz 2 -ppsz 2 --epochs 3 -u tcp://192.168.58.193:11001
+python train_mnist_pp_32_dppp_grps.py -r scheduler -w 4 -k 0 -t "dp+pp" -dpsz 2 -ppsz 2 --epochs 3 -u tcp://127.0.0.1:11001
 
-python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 0 -g 0 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://192.168.58.193:12000 -s tcp://192.168.58.193:11001
-
-python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 1 -g 1 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://192.168.58.193:12001 -s tcp://192.168.58.193:11001
-
-python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 2 -g 2 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://192.168.58.193:12002 -s tcp://192.168.58.193:11001
-
-python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 3 -g 0 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://192.168.58.192:12001 -s tcp://192.168.58.193:11001
+python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 0 -g 0 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://127.0.0.1:12000 -s tcp://127.0.0.1:11001
+python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 1 -g 1 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://127.0.0.1:12001 -s tcp://127.0.0.1:11001
+python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 2 -g 2 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://127.0.0.1:12002 -s tcp://127.0.0.1:11001
+python train_mnist_pp_32_dppp_grps.py -r worker -w 4 -k 3 -g 3 -t "dp+pp" -dpsz 2 -ppsz 2 -u tcp://127.0.0.1:12003 -s tcp://127.0.0.1:11001
 
 """
 
